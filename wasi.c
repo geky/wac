@@ -349,8 +349,91 @@ uint32_t _wasi_unstable__path_open_(__wasi_fd_t           dirfd,
     return __WASI_ESUCCESS;
 }
 
+uint32_t _wasi_unstable__path_filestat_get_(__wasi_fd_t            fd,
+                                            __wasi_lookupflags_t   flags,
+                                            uint32_t               path_offset,
+                                            size_t                 path_len,
+                                            uint32_t               buf_offset) {
+    const char *path       = offset2addr(path_offset);
+    __wasi_filestat_t *buf = offset2addr(buf_offset);
+
+    // copy path so we can ensure it is NULL terminated
+    char host_path[1024];
+    if (path_len > 1023) {
+        FATAL("path_open called with path_len > 1023\n");
+    }
+    memmove(host_path, path, path_len);
+    host_path[path_len] = '\0'; // NULL terminator
+
+    struct stat statbuf;
+    int err = fstatat(fd, host_path, &statbuf, 0);
+    if (err < 0) { return errno_to_wasi(errno); }
+
+    buf->st_dev = statbuf.st_dev;
+    buf->st_ino = statbuf.st_ino;
+    buf->st_filetype =  statbuf.st_mode;
+    buf->st_nlink = statbuf.st_nlink;
+    buf->st_size = statbuf.st_size;
+    buf->st_atim = statbuf.st_atime;
+    buf->st_mtim = statbuf.st_mtime;
+    buf->st_ctim = statbuf.st_ctime;
+
+    return __WASI_ESUCCESS;
+}
+
+uint32_t _wasi_unstable__path_unlink_file_(__wasi_fd_t fd,
+                                           uint32_t path_offset,
+                                           size_t path_len) {
+    const char *path = offset2addr(path_offset);
+
+    // copy path so we can ensure it is NULL terminated
+    char host_path[1024];
+    if (path_len > 1023) {
+        FATAL("path_open called with path_len > 1023\n");
+    }
+    memmove(host_path, path, path_len);
+    host_path[path_len] = '\0'; // NULL terminator
+
+    int err = unlinkat(fd, host_path, 0);
+    if (err < 0) { return errno_to_wasi(errno); }
+
+    return __WASI_ESUCCESS;
+}
+
+uint32_t _wasi_unstable__path_create_directory_(__wasi_fd_t fd,
+                                                uint32_t path_offset,
+                                                size_t path_len) {
+    const char *path = offset2addr(path_offset);
+
+    // copy path so we can ensure it is NULL terminated
+    char host_path[1024];
+    if (path_len > 1023) {
+        FATAL("path_open called with path_len > 1023\n");
+    }
+    memmove(host_path, path, path_len);
+    host_path[path_len] = '\0'; // NULL terminator
+
+    int err = mkdirat(fd, host_path, 0777);
+    if (err < 0) { return errno_to_wasi(errno); }
+
+    return __WASI_ESUCCESS;
+}
+
 uint32_t _wasi_unstable__proc_exit_(uint32_t code) {
     exit(code);
+}
+
+uint32_t _wasi_unstable__fd_fdstat_set_flags_(__wasi_fd_t fd,
+                                              __wasi_fdflags_t flags) {
+    int fflags = ((flags & __WASI_FDFLAG_APPEND)   ? O_APPEND   : 0) |
+                 ((flags & __WASI_FDFLAG_DSYNC)    ? O_DSYNC    : 0) |
+                 ((flags & __WASI_FDFLAG_NONBLOCK) ? O_NONBLOCK : 0) |
+                 ((flags & __WASI_FDFLAG_RSYNC)    ? O_RSYNC    : 0) |
+                 ((flags & __WASI_FDFLAG_SYNC)     ? O_SYNC     : 0);
+    int err = fcntl(fd, F_SETFL, fflags);
+    if (err < 0) { return errno_to_wasi(errno); }
+
+    return __WASI_ESUCCESS;
 }
 
 

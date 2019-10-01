@@ -47,6 +47,7 @@ void thunk_out(Module *m, uint32_t fidx) {
     case 0x8002         : THUNK_OUT_1(m, func, 0, I);           break;
     case 0x8103         : THUNK_OUT_1(m, func, i, f);           break;
     case 0x810121       : THUNK_OUT_3(m, func, i, i,I,i);       break;
+    case 0x8101211      : THUNK_OUT_4(m, func, i, i,I,i,i);     break; // ?
     case 0x8404         : THUNK_OUT_1(m, func, F, F);           break;
     case 0x810111112211 : THUNK_OUT_9(m, func, i, i,i,i,i,i,I,I,i,i); break;
     // TODO: casting this can truncate the top of the mask
